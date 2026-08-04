@@ -1,0 +1,218 @@
+erDiagram
+    COMPANIES ||--o{ ROLES : has
+    COMPANIES ||--o{ DEPARTMENTS : has
+    COMPANIES ||--o{ OFFICES : has
+    COMPANIES ||--o{ SHIFTS : has
+    COMPANIES ||--o{ PERSONS : has
+    COMPANIES ||--o{ DEVICES : has
+    COMPANIES ||--o{ PERSON_SHIFT_ASSIGNMENTS : has
+    COMPANIES ||--o{ ATTENDANCE : has
+    COMPANIES ||--o{ ATTENDANCE_EVENTS : has
+    COMPANIES ||--o{ ATTENDANCE_VERIFICATIONS : has
+    COMPANIES ||--o{ ATTENDANCE_POLICIES : has
+    COMPANIES ||--o{ POLICY_VERIFICATION_METHODS : has
+    COMPANIES ||--o{ QR_TOKENS : has
+    COMPANIES ||--o{ ANOMALIES : has
+    COMPANIES ||--o{ AUDIT_LOGS : has
+
+    ROLES ||--o{ PERSONS : assigns
+    DEPARTMENTS ||--o{ PERSONS : groups
+    OFFICES ||--o{ PERSONS : base_location
+    PERSONS ||--o{ DEVICES : registers
+    PERSONS ||--o{ PERSON_SHIFT_ASSIGNMENTS : gets
+    SHIFTS ||--o{ PERSON_SHIFT_ASSIGNMENTS : assigned
+    PERSONS ||--o{ ATTENDANCE : has
+    OFFICES ||--o{ ATTENDANCE : records
+    SHIFTS ||--o{ ATTENDANCE : scheduled_for
+    ATTENDANCE_STATUS ||--o{ ATTENDANCE : sets
+    ATTENDANCE ||--o{ ATTENDANCE_EVENTS : contains
+    DEVICES ||--o{ ATTENDANCE_EVENTS : used_by
+    ATTENDANCE_EVENTS ||--o{ ATTENDANCE_VERIFICATIONS : verified_by
+    VERIFICATION_METHODS ||--o{ ATTENDANCE_VERIFICATIONS : uses
+    OFFICES ||--o{ ATTENDANCE_POLICIES : defines
+    DEPARTMENTS ||--o{ ATTENDANCE_POLICIES : optional_scope
+    SHIFTS ||--o{ ATTENDANCE_POLICIES : applies_to
+    ATTENDANCE_POLICIES ||--o{ POLICY_VERIFICATION_METHODS : includes
+    VERIFICATION_METHODS ||--o{ POLICY_VERIFICATION_METHODS : required_by
+    OFFICES ||--o{ QR_TOKENS : issues
+    ATTENDANCE ||--o{ ANOMALIES : flags
+    ANOMALY_TYPES ||--o{ ANOMALIES : categorizes
+    PERSONS ||--o{ AUDIT_LOGS : performs
+    DEVICES ||--o{ AUDIT_LOGS : logs_from
+
+    COMPANIES {
+        bigint id PK
+        string name
+        string slug
+        timestamp created_at
+    }
+
+    ROLES {
+        bigint id PK
+        bigint company_id FK
+        string name
+    }
+
+    DEPARTMENTS {
+        bigint id PK
+        bigint company_id FK
+        string name
+        boolean is_active
+    }
+
+    OFFICES {
+        bigint id PK
+        bigint company_id FK
+        string name
+        decimal latitude
+        decimal longitude
+        integer radius
+        boolean is_active
+    }
+
+    SHIFTS {
+        bigint id PK
+        bigint company_id FK
+        string name
+        time start_time
+        time end_time
+    }
+
+    PERSONS {
+        bigint id PK
+        bigint company_id FK
+        bigint role_id FK
+        bigint office_id FK
+        bigint department_id FK
+        string employee_code
+        string name
+        string email
+        string password_hash
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    DEVICES {
+        bigint id PK
+        bigint company_id FK
+        bigint person_id FK
+        string device_hash
+        string device_name
+        timestamp registered_at
+        timestamp last_seen
+        boolean is_active
+    }
+
+    ATTENDANCE_STATUS {
+        bigint id PK
+        string name
+    }
+
+    VERIFICATION_METHODS {
+        bigint id PK
+        string name
+    }
+
+    ANOMALY_TYPES {
+        bigint id PK
+        string name
+    }
+
+    PERSON_SHIFT_ASSIGNMENTS {
+        bigint id PK
+        bigint company_id FK
+        bigint person_id FK
+        bigint shift_id FK
+        timestamp effective_from
+        timestamp effective_to
+    }
+
+    ATTENDANCE {
+        bigint id PK
+        bigint company_id FK
+        bigint person_id FK
+        bigint office_id FK
+        bigint shift_id FK
+        bigint status_id FK
+        date work_date
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ATTENDANCE_EVENTS {
+        bigint id PK
+        bigint company_id FK
+        bigint attendance_id FK
+        string event_type
+        timestamp occurred_at
+        decimal latitude
+        decimal longitude
+        bigint device_id FK
+    }
+
+    ATTENDANCE_VERIFICATIONS {
+        bigint id PK
+        bigint company_id FK
+        bigint attendance_event_id FK
+        bigint verification_method_id FK
+        string status
+        decimal score
+        decimal raw_score
+        string source
+        string reason
+        json metadata
+        timestamp verified_at
+    }
+
+    ATTENDANCE_POLICIES {
+        bigint id PK
+        bigint company_id FK
+        bigint office_id FK
+        bigint department_id FK
+        bigint shift_id FK
+        time late_after
+        integer grace_minutes
+        timestamp created_at
+    }
+
+    POLICY_VERIFICATION_METHODS {
+        bigint id PK
+        bigint company_id FK
+        bigint policy_id FK
+        bigint verification_method_id FK
+        boolean is_required
+    }
+
+    QR_TOKENS {
+        bigint id PK
+        bigint company_id FK
+        bigint office_id FK
+        string token_hash
+        timestamp issued_at
+        timestamp expires_at
+        boolean used
+    }
+
+    ANOMALIES {
+        bigint id PK
+        bigint company_id FK
+        bigint attendance_id FK
+        bigint type_id FK
+        string severity
+        json details
+        boolean resolved
+        timestamp created_at
+    }
+
+    AUDIT_LOGS {
+        bigint id PK
+        bigint company_id FK
+        bigint person_id FK
+        string action
+        string table_name
+        bigint record_id
+        timestamp timestamp
+        string ip
+        bigint device_id FK
+    }

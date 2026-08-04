@@ -1,0 +1,30 @@
+# Python generator scripts (internal tooling, not project code)
+gen_docx.py
+gen_docx_fixed.py
+gen_er.py
+
+# Mermaid config
+mermaid_config.json
+
+# Temp Word lock files
+~$*
+
+# Old/duplicate files
+attendance_er_diagram.docx
+attendance_er_diagram.md
+attendance_er_diagram.pdf
+attendance_system_documentation_v2.docx
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+dist/
+.env
+.env.local
+
+# Python
+__pycache__/
+*.pyc
