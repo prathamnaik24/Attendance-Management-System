@@ -24,6 +24,7 @@ node_modules/
 dist/
 .env
 .env.local
+package-lock.json
 
 # Python
 __pycache__/
