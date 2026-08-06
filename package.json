@@ -10,7 +10,13 @@
     "db:migrate": "node-pg-migrate -m database/migrations up",
     "db:migrate:down": "node-pg-migrate -m database/migrations down",
     "db:migrate:redo": "node-pg-migrate -m database/migrations redo",
-    "db:create-migration": "node-pg-migrate -m database/migrations create"
+    "db:create-migration": "node-pg-migrate -m database/migrations create",
+    "docker:up": "docker-compose up",
+    "docker:up:build": "docker-compose up --build",
+    "docker:down": "docker-compose down",
+    "docker:down:volumes": "docker-compose down -v",
+    "docker:logs": "docker-compose logs -f",
+    "docker:ps": "docker-compose ps"
   },
   "repository": {
     "type": "git",

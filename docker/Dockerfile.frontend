@@ -1,0 +1,31 @@
+# ─── Frontend Development Dockerfile ─────────────────────────────────────────
+#
+# This is a DEVELOPMENT image — it runs the Vite dev server with HMR (Hot
+# Module Replacement). Changes to React files are reflected in the browser
+# instantly without rebuilding the image.
+#
+# vite.config.js must have `server: { host: true }` for the dev server
+# to bind to 0.0.0.0 (all interfaces) inside the container — it does.
+#
+# Do NOT use this for production. Run `npm run build` and serve the
+# static output with nginx or a CDN instead.
+# ─────────────────────────────────────────────────────────────────────────────
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files first — Docker caches this layer.
+# npm install only re-runs when package.json changes.
+COPY package*.json ./
+
+# Install all deps (including devDependencies — vite, tailwind, etc.)
+RUN npm install
+
+# Copy source — overridden at runtime by the docker-compose volume mount
+COPY . .
+
+EXPOSE 5173
+
+# Vite dev server with HMR
+CMD ["npm", "run", "dev"]
