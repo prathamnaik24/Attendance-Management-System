@@ -33,8 +33,11 @@ The system is designed as a **multi-tenant SaaS** — a single deployment can se
 /
 ├── backend/          # Node.js + Express REST API
 ├── frontend/         # React + Vite (employee app + admin dashboard)
-├── database/         # PostgreSQL schema migrations and seed data
+├── database/         # PostgreSQL schema migrations (node-pg-migrate)
+├── docker/           # Dockerfiles for dev environment
+├── docs/             # Architecture and design documentation
 ├── docker-compose.yml
+├── package.json      # Root workspace scripts
 ├── .env.example
 └── README.md
 ```
@@ -63,10 +66,17 @@ cp .env.example .env
 # Edit .env with your values
 ```
 
-### 3. Run with Docker
+### 3. Run with Docker (Recommended)
 
 ```bash
-docker-compose up --build
+# Start all services (Database, Backend, Frontend)
+npm run docker:up:build
+
+# View logs
+npm run docker:logs
+
+# Stop all services
+npm run docker:down
 ```
 
 ### 4. Run without Docker
@@ -87,16 +97,17 @@ npm run dev
 
 ## Database Schema
 
-The schema is organized into 5 logical domains:
+The schema is organized into logical domains. **We use the `ltree` extension** for high-performance deep organizational hierarchies.
 
 | Domain | Tables |
 |--------|--------|
-| **Tenant & Org** | `companies`, `offices`, `departments`, `roles`, `shifts` |
-| **Users & Auth** | `persons`, `devices`, `person_shift_assignments` |
-| **Attendance Engine** | `attendance`, `attendance_events`, `attendance_verifications` |
-| **Security & Audit** | `attendance_policies`, `policy_verification_methods`, `qr_tokens`, `anomalies`, `audit_logs` |
-| **Lookup Tables** | `attendance_status`, `verification_methods`, `anomaly_types` |
+| **Organization & Structure** | `organizations`, `departments`, `positions` (ltree hierarchy) |
+| **People & Assignments** | `persons`, `position_assignments` |
+| **Roles & Permissions** | `roles`, `permissions`, `role_permissions`, `person_roles` |
+| **Attendance & Leaves** | `attendance`, `holidays`, `leave_types`, `leave_policies`, `leave_balances`, `leave_requests` |
+| **Salary & Payroll** | `salary_structures`, `payroll`, `salary_deductions` |
 
+> For full details, read [docs/database-design.md](./docs/database-design.md)
 ---
 
 ## API Endpoints (Key)
