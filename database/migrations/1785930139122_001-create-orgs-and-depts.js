@@ -6,11 +6,18 @@ export const up = (pgm) => {
     pgm.createTable('organizations', {
         id: { type: 'uuid', default: pgm.func('gen_random_uuid()'), primaryKey: true },
         name: { type: 'varchar(255)', notNull: true },
-        slug: { type: 'varchar(255)', unique: true }, 
+        slug: { type: 'varchar(255)', unique: true },
         type: { type: 'varchar(100)', notNull: true }, // e.g., 'Corporate', 'Educational'
         is_active: { type: 'boolean', default: true },
+        // JSONB for flexible custom fields — different org types have different attributes
+        metadata: { type: 'jsonb', default: '{}' },
         created_at: {
-          type: 'timestamp',
+          type: 'timestamptz', // timezone-aware — orgs can span multiple timezones
+          notNull: true,
+          default: pgm.func('current_timestamp'),
+        },
+        updated_at: {
+          type: 'timestamptz',
           notNull: true,
           default: pgm.func('current_timestamp'),
         },
@@ -27,7 +34,7 @@ export const up = (pgm) => {
       name: { type: 'varchar(255)', notNull: true },
       is_active: { type: 'boolean', default: true },
       created_at: {
-        type: 'timestamp',
+        type: 'timestamptz', // timezone-aware
         notNull: true,
         default: pgm.func('current_timestamp'),
       },
