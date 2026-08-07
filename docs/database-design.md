@@ -69,12 +69,11 @@ All salary/payroll amounts use exact decimals.
 
 **`position_assignments`**
 - `id` (UUID, PK)
-- `organization_id` (UUID, FK -> organizations)
 - `person_id` (UUID, FK -> persons)
 - `position_id` (UUID, FK -> positions)
 - `is_primary` (BOOLEAN)
-- `started_at` (DATE)
-- `ended_at` (DATE) - NULL means active
+- `start_date` (DATE)
+- `end_date` (DATE) - NULL means active
 
 ---
 
@@ -87,9 +86,8 @@ All salary/payroll amounts use exact decimals.
 
 **`permissions`**
 - `id` (UUID, PK)
-- `module` (TEXT) - e.g., 'attendance', 'payroll'
-- `action` (TEXT) - e.g., 'view', 'approve'
-- `scope` (TEXT) - e.g., 'own', 'department'
+- `name` (TEXT, UNIQUE) - e.g., 'approve_leaves'
+- `description` (TEXT)
 
 **`role_permissions`**
 - Links Roles to Permissions
@@ -99,13 +97,124 @@ All salary/payroll amounts use exact decimals.
 
 ---
 
-### 4. Modules (Attendance, Leave, Payroll)
+### 4. Attendance Module
+**`attendance`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `person_id` (UUID, FK -> persons)
+- `work_date` (DATE)
+- `check_in_at` (TIMESTAMPTZ)
+- `check_out_at` (TIMESTAMPTZ)
+- `status` (TEXT)
+- `total_hours` (NUMERIC)
 
-*(To be fully defined based on Supervisor's final module structures. Expected tables below:)*
+**`holidays`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `name` (TEXT)
+- `date` (DATE)
+- `type` (TEXT)
+- `department_ids` (UUID ARRAY)
 
-- **Attendance:** `attendance`, `holidays`
-- **Leave:** `leave_types`, `leave_policies`, `leave_balances`, `leave_requests`
-- **Payroll:** `salary_structures`, `payroll`, `salary_deductions`
+---
+
+### 5. Leave Module
+**`leave_types`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `name` (TEXT)
+- `is_paid` (BOOLEAN)
+
+**`leave_policies`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `leave_type_id` (UUID, FK -> leave_types)
+- `accrual_type` (TEXT)
+- `accrual_amount` (NUMERIC)
+- `requires_approval` (BOOLEAN)
+
+**`leave_balances`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `person_id` (UUID, FK -> persons)
+- `leave_type_id` (UUID, FK -> leave_types)
+- `year` (INTEGER)
+- `total_days` (NUMERIC)
+- `used_days` (NUMERIC)
+- `pending_days` (NUMERIC)
+
+**`leave_requests`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `person_id` (UUID, FK -> persons)
+- `leave_type_id` (UUID, FK -> leave_types)
+- `start_date` (DATE)
+- `end_date` (DATE)
+- `status` (TEXT)
+- `actioned_by` (UUID, FK -> persons)
+
+---
+
+### 6. Salary & Payroll Module
+**`salary_structures`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `position_id` (UUID, FK -> positions)
+- `person_id` (UUID, FK -> persons)
+- `base_salary` (NUMERIC)
+- `currency` (TEXT)
+- `effective_from` (DATE)
+- `effective_to` (DATE)
+
+**`payroll`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `person_id` (UUID, FK -> persons)
+- `salary_structure_id` (UUID, FK -> salary_structures)
+- `pay_period_start` (DATE)
+- `pay_period_end` (DATE)
+- `gross_salary` (NUMERIC)
+- `net_salary` (NUMERIC)
+- `status` (TEXT)
+
+**`salary_deductions`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `payroll_id` (UUID, FK -> payroll)
+- `name` (TEXT)
+- `amount` (NUMERIC)
+- `is_employer_contribution` (BOOLEAN)
+
+---
+
+### 7. Performance Module
+**`performance_cycles`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `name` (TEXT)
+- `start_date` (DATE)
+- `end_date` (DATE)
+- `status` (TEXT)
+
+**`performance_goals`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `person_id` (UUID, FK -> persons)
+- `cycle_id` (UUID, FK -> performance_cycles)
+- `title` (TEXT)
+- `description` (TEXT)
+- `weightage` (NUMERIC)
+- `status` (TEXT)
+
+**`performance_reviews`**
+- `id` (UUID, PK)
+- `organization_id` (UUID, FK -> organizations)
+- `person_id` (UUID, FK -> persons)
+- `reviewer_id` (UUID, FK -> persons)
+- `cycle_id` (UUID, FK -> performance_cycles)
+- `rating` (NUMERIC)
+- `feedback` (TEXT)
+- `status` (TEXT)
 
 ---
 
