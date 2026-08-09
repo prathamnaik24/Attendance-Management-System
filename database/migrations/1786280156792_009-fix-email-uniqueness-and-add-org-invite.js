@@ -23,8 +23,8 @@ export const up = (pgm) => {
     unique: ['organization_id', 'email'],
   });
 
-  // 3. Add phone_number and avatar_url columns to persons (useful for profiles)
-  pgm.addColumns('persons', {
+  // 3. Add phone_number, avatar_url, joined_at columns to persons
+  pgm.addColumn('persons', {
     phone_number: { type: 'varchar(30)' },
     avatar_url: { type: 'text' },
     joined_at: { type: 'date', default: pgm.func('current_date') },
