@@ -1,0 +1,40 @@
+{
+  "name": "burraa",
+  "version": "1.0.0",
+  "description": "> **Internship Project** — Multi-tenant, event-driven employee attendance tracking system.\r > \r > **Tech Stack:** PostgreSQL · Node.js + Express · React + Vite",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "db:migrate": "node-pg-migrate -m database/migrations up",
+    "db:migrate:down": "node-pg-migrate -m database/migrations down",
+    "db:migrate:redo": "node-pg-migrate -m database/migrations redo",
+    "db:create-migration": "node-pg-migrate -m database/migrations create",
+    "docker:up": "docker-compose up",
+    "docker:up:build": "docker-compose up --build",
+    "docker:down": "docker-compose down",
+    "docker:down:volumes": "docker-compose down -v",
+    "docker:logs": "docker-compose logs -f",
+    "docker:ps": "docker-compose ps"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prathamnaik24/Attendance-Management-System.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/prathamnaik24/Attendance-Management-System/issues"
+  },
+  "homepage": "https://github.com/prathamnaik24/Attendance-Management-System#readme",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "node-pg-migrate": "^9.0.0"
+  }
+}
