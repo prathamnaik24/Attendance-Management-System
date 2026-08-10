@@ -222,10 +222,10 @@ async function seed() {
     section('Person Roles');
 
     await client.query(`
-      INSERT INTO person_roles (organization_id, person_id, role_id)
-      VALUES ($1, $2, $3)
+      INSERT INTO person_roles (person_id, role_id)
+      VALUES ($1, $2)
       ON CONFLICT DO NOTHING
-    `, [org.id, person.id, roles['Org Admin'].id]);
+    `, [person.id, roles['Org Admin'].id]);
 
     log(`✅ ${person.first_name} ${person.last_name} → Org Admin role`);
 
