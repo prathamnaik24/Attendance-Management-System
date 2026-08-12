@@ -26,7 +26,7 @@ RUN npm install
 # Copy source — this layer is overridden at runtime by the docker-compose volume mount
 COPY . .
 
-EXPOSE 5000
+EXPOSE 5001
 
 # dumb-init as entrypoint so signals are forwarded correctly to node
 ENTRYPOINT ["dumb-init", "--"]
