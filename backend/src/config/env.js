@@ -39,5 +39,5 @@ export const env = {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'dev_access_secret_key_1234567890',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev_refresh_secret_key_1234567890',
   },
-  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  CORS_ORIGIN: (process.env.CORS_ORIGIN || 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5175,http://127.0.0.1:5175').split(','),
 };

@@ -17,9 +17,14 @@ export const errorHandler = (err, req, res, next) => {
 
   console.error(`[Error] ${statusCode} - ${message}\nStack: ${err.stack}`);
 
-  res.status(statusCode).json({
+  // Development vs Production error detail
+  console.error('[Unhandled Error]', err.stack);
+  const response = {
     status: 'error',
     statusCode,
-    message: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : message,
-  });
+    message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+  };
+
+  res.status(statusCode).json(response);
 };
