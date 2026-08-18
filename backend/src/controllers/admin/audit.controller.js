@@ -4,7 +4,7 @@ export const getAuditLogs = async (req, res) => {
   try {
     const { limit, offset } = req.query;
     const logs = await AuditService.getAuditLogs(
-      req.user.org_id, 
+      req.user.organization_id, 
       limit ? parseInt(limit) : 50, 
       offset ? parseInt(offset) : 0
     );

@@ -98,6 +98,9 @@ export class EmployeeAuthService {
     const tokens = generateTokens({
       person_id: person.id,
       organization_id: person.organization_id,
+      first_name: person.first_name,
+      last_name: person.last_name,
+      email: person.email,
       type: 'employee',
       position_path: primaryPosition?.position_path ?? null,
       roles,

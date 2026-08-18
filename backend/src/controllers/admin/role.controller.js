@@ -2,7 +2,7 @@ import { RoleService } from '../../services/admin/RoleService.js';
 
 export const getRoles = async (req, res) => {
   try {
-    const roles = await RoleService.getRoles(req.user.org_id);
+    const roles = await RoleService.getRoles(req.user.organization_id);
     res.json(roles);
   } catch (error) {
     res.status(500).json({ error: error.message });

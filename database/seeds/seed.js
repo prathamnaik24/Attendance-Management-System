@@ -120,33 +120,46 @@ async function seed() {
       log(`✅ Position: ${existing.title.padEnd(20)} path: ${existing.path}`);
     }
 
-    // ── 4. Person (Org Admin) ────────────────────────────────────────────────
+    // ── 4. Persons (Admin & Employees) ───────────────────────────────────────
     section('Persons');
 
-    const passwordHash = await bcrypt.hash('Admin@1234', 12);
+    const adminHash = await bcrypt.hash('Admin@1234', 12);
+    const userHash = await bcrypt.hash('Password@1234', 12);
 
-    const personResult = await client.query(`
-      INSERT INTO persons (organization_id, first_name, last_name, email, password_hash, is_active)
-      VALUES ($1, 'John', 'Admin', 'john.admin@acme-corp.com', $2, true)
-      ON CONFLICT (organization_id, email) DO UPDATE SET first_name = EXCLUDED.first_name
-      RETURNING id, first_name, last_name, email
-    `, [org.id, passwordHash]);
+    const peopleDefs = [
+      { first_name: 'John',   last_name: 'Admin',  email: 'john.admin@acme-corp.com', employee_id: 'EMP-001', password_hash: adminHash, position: 'acme_corp',             role: 'Org Admin' },
+      { first_name: 'Rohan',  last_name: 'Sharma', email: 'rohan@acme-corp.com',      employee_id: 'EMP-002', password_hash: userHash,  position: 'acme_corp.cto.senior_dev', role: 'Employee' },
+      { first_name: 'Ayesha', last_name: 'Khan',   email: 'ayesha@acme-corp.com',     employee_id: 'EMP-003', password_hash: userHash,  position: 'acme_corp.hr_director',    role: 'HR Manager' },
+    ];
 
-    const person = personResult.rows[0];
-    log(`✅ Person: ${person.first_name} ${person.last_name} (${person.email})`);
-    log(`   Password (seed only): Admin@1234`);
+    const seededPeople = [];
+
+    for (const def of peopleDefs) {
+      const res = await client.query(`
+        INSERT INTO persons (organization_id, first_name, last_name, email, employee_id, password_hash, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, true)
+        ON CONFLICT (organization_id, email) DO UPDATE SET employee_id = EXCLUDED.employee_id, password_hash = EXCLUDED.password_hash
+        RETURNING id, first_name, last_name, email, employee_id
+      `, [org.id, def.first_name, def.last_name, def.email, def.employee_id, def.password_hash]);
+
+      const person = res.rows[0];
+      seededPeople.push({ ...person, position: def.position, role: def.role });
+      log(`✅ Person: ${person.first_name} ${person.last_name} (${person.email}) — ID: ${person.employee_id}`);
+    }
 
     // ── 5. Position Assignment ───────────────────────────────────────────────
     section('Position Assignments');
 
-    const assignResult = await client.query(`
-      INSERT INTO position_assignments (person_id, position_id, is_primary, start_date)
-      VALUES ($1, $2, true, current_date)
-      ON CONFLICT DO NOTHING
-      RETURNING id
-    `, [person.id, positions['acme_corp'].id]);
-
-    log(`✅ Assigned ${person.first_name} ${person.last_name} → CEO position`);
+    for (const p of seededPeople) {
+      if (p.position && positions[p.position]) {
+        await client.query(`
+          INSERT INTO position_assignments (person_id, position_id, is_primary, start_date)
+          VALUES ($1, $2, true, current_date)
+          ON CONFLICT DO NOTHING
+        `, [p.id, positions[p.position].id]);
+        log(`✅ Assigned ${p.first_name} ${p.last_name} → ${p.position} position`);
+      }
+    }
 
     // ── 6. Roles ─────────────────────────────────────────────────────────────
     section('Roles');
@@ -218,19 +231,24 @@ async function seed() {
       log(`✅ ${roleName.padEnd(15)} → [${permNames.join(', ')}]`);
     }
 
-    // ── 9. Assign Org Admin role to the person ───────────────────────────────
+    // ── 9. Assign Roles to Persons ───────────────────────────────────────────
     section('Person Roles');
 
-    await client.query(`
-      INSERT INTO person_roles (person_id, role_id)
-      VALUES ($1, $2)
-      ON CONFLICT DO NOTHING
-    `, [person.id, roles['Org Admin'].id]);
-
-    log(`✅ ${person.first_name} ${person.last_name} → Org Admin role`);
+    for (const p of seededPeople) {
+      if (p.role && roles[p.role]) {
+        await client.query(`
+          INSERT INTO person_roles (person_id, role_id)
+          VALUES ($1, $2)
+          ON CONFLICT DO NOTHING
+        `, [p.id, roles[p.role].id]);
+        log(`✅ Assigned role ${p.role} → ${p.first_name} ${p.last_name}`);
+      }
+    }
 
     // ── 10. Sample Audit Log ──────────────────────────────────────────────────
     section('Audit Log (sample row)');
+
+    const adminPerson = seededPeople.find(p => p.email === 'john.admin@acme-corp.com');
 
     await client.query(`
       INSERT INTO audit_logs (
@@ -251,7 +269,7 @@ async function seed() {
         slug: org.slug,
         seeded_at: new Date().toISOString(),
       }),
-      person.id,
+      adminPerson.id,
     ]);
 
     log(`✅ Audit log entry inserted (action: SEED)`);
