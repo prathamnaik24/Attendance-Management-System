@@ -84,20 +84,23 @@ export const loginOrg = async (req, res, next) => {
  * POST /api/auth/employee/login
  *
  * Login as a standard employee.
- * Body: { org_slug, email, password }
+ * Body: { org_slug, employee_id, password }
+ *
+ * The employee_id is assigned by the org admin and acts as a second
+ * credential alongside the password, preventing email-based spoofing.
  */
 export const loginEmployee = async (req, res, next) => {
   try {
-    const { org_slug, email, password } = req.body;
+    const { org_slug, employee_id, password } = req.body;
 
-    if (!org_slug || !email || !password) {
-      throw new AppError('org_slug, email and password are required', 400);
+    if (!org_slug || !employee_id || !password) {
+      throw new AppError('org_slug, employee_id and password are required', 400);
     }
 
     const service = AuthFactory.create('employee');
     const result = await service.login({
-      org_slug: org_slug.toLowerCase(),
-      email: email.toLowerCase(),
+      org_slug: org_slug.toLowerCase().trim(),
+      employee_id: employee_id.trim(),
       password,
     });
 

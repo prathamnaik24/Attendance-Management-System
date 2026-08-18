@@ -7,22 +7,24 @@ import { AppError } from '../../middlewares/errorHandler.js';
  * EmployeeAuthService
  * Handles standard employee login.
  *
- * Employees log in with their organization's slug + their email + password.
- * The org_slug scopes the login to the correct tenant, preventing cross-org
- * credential collisions (two orgs can have employees with the same email).
+ * Employees log in with:
+ *   org_slug    — identifies the tenant (workspace code)
+ *   employee_id — unique ID assigned by the org admin (e.g. EMP-001)
+ *   password    — set by the employee when they accepted their invite
  *
- * On success, the JWT payload includes the employee's primary position's ltree
- * path, which is used by the backend to resolve management hierarchy queries.
+ * Using employee_id instead of email as a login credential prevents spoofing:
+ * an attacker who knows someone's email still cannot log in without their
+ * admin-assigned ID.
  */
 export class EmployeeAuthService {
 
   /**
    * @param {Object} credentials
-   * @param {string} credentials.org_slug  - The organization's unique slug
-   * @param {string} credentials.email
+   * @param {string} credentials.org_slug    - The organization's unique slug
+   * @param {string} credentials.employee_id - Admin-assigned employee identifier
    * @param {string} credentials.password
    */
-  async login({ org_slug, email, password }) {
+  async login({ org_slug, employee_id, password }) {
     // 1. Resolve org by slug
     const orgResult = await db.query(
       `SELECT id, name, slug, is_active FROM organizations WHERE slug = $1`,
@@ -30,7 +32,6 @@ export class EmployeeAuthService {
     );
 
     if (orgResult.rows.length === 0) {
-      // Return generic message — don't reveal whether the org exists
       throw new AppError('Invalid credentials', 401);
     }
 
@@ -40,15 +41,14 @@ export class EmployeeAuthService {
       throw new AppError('This organization account has been suspended.', 403);
     }
 
-    // 2. Find the person by email within this specific organization
-    //    (email + org_id is the composite unique key after migration 009)
+    // 2. Find the person by employee_id within this specific organization
     const personResult = await db.query(
       `SELECT
-         p.id, p.first_name, p.last_name, p.email,
+         p.id, p.first_name, p.last_name, p.email, p.employee_id,
          p.password_hash, p.is_active, p.organization_id
        FROM persons p
-       WHERE p.organization_id = $1 AND p.email = $2`,
-      [org.id, email]
+       WHERE p.organization_id = $1 AND p.employee_id = $2`,
+      [org.id, employee_id.trim()]
     );
 
     if (personResult.rows.length === 0) {
@@ -58,7 +58,7 @@ export class EmployeeAuthService {
     const person = personResult.rows[0];
 
     if (!person.is_active) {
-      throw new AppError('Your account has been deactivated. Please contact HR.', 403);
+      throw new AppError('Your account has been deactivated. Please contact your admin.', 403);
     }
 
     // 3. Verify password
@@ -67,8 +67,7 @@ export class EmployeeAuthService {
       throw new AppError('Invalid credentials', 401);
     }
 
-    // 4. Fetch their primary position assignment + the position's ltree path
-    //    The ltree path is what enables the "manager sees all subordinates" feature
+    // 4. Fetch primary position + ltree path (used for hierarchy-scoped queries)
     const positionResult = await db.query(
       `SELECT
          pa.id AS assignment_id,
@@ -86,7 +85,7 @@ export class EmployeeAuthService {
 
     const primaryPosition = positionResult.rows[0] || null;
 
-    // 5. Fetch their roles
+    // 5. Fetch roles
     const rolesResult = await db.query(
       `SELECT r.name FROM person_roles pr
        JOIN roles r ON r.id = pr.role_id
@@ -95,7 +94,7 @@ export class EmployeeAuthService {
     );
     const roles = rolesResult.rows.map((r) => r.name);
 
-    // 6. Generate JWT with full context
+    // 6. Generate JWT
     const tokens = generateTokens({
       person_id: person.id,
       organization_id: person.organization_id,
@@ -110,17 +109,10 @@ export class EmployeeAuthService {
         first_name: person.first_name,
         last_name: person.last_name,
         email: person.email,
-        organization: {
-          id: org.id,
-          name: org.name,
-          slug: org.slug,
-        },
+        employee_id: person.employee_id,
+        organization: { id: org.id, name: org.name, slug: org.slug },
         primary_position: primaryPosition
-          ? {
-              id: primaryPosition.position_id,
-              title: primaryPosition.position_title,
-              path: primaryPosition.position_path,
-            }
+          ? { id: primaryPosition.position_id, title: primaryPosition.position_title, path: primaryPosition.position_path }
           : null,
       },
       roles,

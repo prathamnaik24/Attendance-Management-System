@@ -13,6 +13,7 @@ export class OrgService {
       first_name,
       last_name,
       email,
+      employee_id = null,
       phone_number = null,
       avatar_url = null,
       position_id = null,
@@ -20,6 +21,10 @@ export class OrgService {
 
     if (!first_name || !last_name || !email) {
       throw new AppError('First name, last name, and email are required to invite an employee', 400);
+    }
+
+    if (!employee_id) {
+      throw new AppError('Employee ID is required. Please assign a unique ID for this employee (e.g. EMP-001).', 400);
     }
 
     const client = await db.getClient();
@@ -37,20 +42,31 @@ export class OrgService {
         throw new AppError(`Employee with email "${email}" already exists in this organization`, 409);
       }
 
+      // 1b. Check if employee_id is already taken in this org
+      const idCheck = await client.query(
+        'SELECT id FROM persons WHERE organization_id = $1 AND employee_id = $2',
+        [tenantId, employee_id.trim()]
+      );
+
+      if (idCheck.rows.length > 0) {
+        throw new AppError(`Employee ID "${employee_id}" is already assigned to another employee in this organization`, 409);
+      }
+
       // 2. Generate a secure high-entropy placeholder password (persons.password_hash is NOT NULL)
       const placeholderPlain = crypto.randomBytes(32).toString('hex');
       const placeholderHash = await bcrypt.hash(placeholderPlain, 12);
 
       // 3. Create the person record
       const personResult = await client.query(
-        `INSERT INTO persons (organization_id, first_name, last_name, email, password_hash, phone_number, avatar_url, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-         RETURNING id, first_name, last_name, email, phone_number, avatar_url, is_active, joined_at`,
+        `INSERT INTO persons (organization_id, first_name, last_name, email, employee_id, password_hash, phone_number, avatar_url, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+         RETURNING id, first_name, last_name, email, employee_id, phone_number, avatar_url, is_active, joined_at`,
         [
           tenantId,
           first_name.trim(),
           last_name.trim(),
           email.toLowerCase().trim(),
+          employee_id.trim(),
           placeholderHash,
           phone_number ? phone_number.trim() : null,
           avatar_url ? avatar_url.trim() : null,
