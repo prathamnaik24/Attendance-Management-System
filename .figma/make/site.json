@@ -1,0 +1,10 @@
+{
+  "description": "Transforms design layouts into clean, ready-to-use code, streamlining development for designers and developers to accelerate project delivery.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
