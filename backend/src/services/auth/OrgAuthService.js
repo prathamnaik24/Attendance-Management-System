@@ -197,6 +197,16 @@ export class OrgAuthService {
     );
     const roles = rolesResult.rows.map((r) => r.name);
 
+    // 4.5 Fetch primary position path
+    const positionResult = await db.query(
+      `SELECT pos.path AS position_path
+       FROM position_assignments pa
+       JOIN positions pos ON pos.id = pa.position_id
+       WHERE pa.person_id = $1 AND pa.is_primary = true AND (pa.end_date IS NULL OR pa.end_date >= current_date)`,
+      [person.id]
+    );
+    const positionPath = positionResult.rows[0]?.position_path || null;
+
     // 5. Generate JWT
     const tokens = generateTokens({
       person_id: person.id,
@@ -205,6 +215,7 @@ export class OrgAuthService {
       last_name: person.last_name,
       email: person.email,
       type: 'org_admin',
+      position_path: positionPath,
       roles,
     });
 

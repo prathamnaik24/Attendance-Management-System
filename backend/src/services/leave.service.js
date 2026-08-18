@@ -297,4 +297,12 @@ export class LeaveService {
       client.release();
     }
   }
+
+  async getLeaveTypes(tenantId) {
+    const res = await db.query(
+      'SELECT id, name, is_paid, is_active FROM leave_types WHERE organization_id = $1 AND is_active = true ORDER BY name ASC',
+      [tenantId]
+    );
+    return res.rows;
+  }
 }

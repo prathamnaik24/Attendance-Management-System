@@ -92,7 +92,7 @@ async function seed() {
       { title: 'CEO',               path: 'acme_corp',                      dept: null,                  parent_path: null },
       { title: 'CTO',               path: 'acme_corp.cto',                  dept: 'Engineering',         parent_path: 'acme_corp' },
       { title: 'HR Director',       path: 'acme_corp.hr_director',          dept: 'Human Resources',     parent_path: 'acme_corp' },
-      { title: 'Senior Developer',  path: 'acme_corp.cto.senior_dev',       dept: 'Engineering',         parent_path: 'acme_corp.cto' },
+      { title: 'Senior Developer',  path: 'acme_corp.hr_director.senior_dev', dept: 'Engineering',       parent_path: 'acme_corp.hr_director' },
       { title: 'Junior Developer',  path: 'acme_corp.cto.junior_dev',       dept: 'Engineering',         parent_path: 'acme_corp.cto' },
     ];
 
@@ -127,9 +127,9 @@ async function seed() {
     const userHash = await bcrypt.hash('Password@1234', 12);
 
     const peopleDefs = [
-      { first_name: 'John',   last_name: 'Admin',  email: 'john.admin@acme-corp.com', employee_id: 'EMP-001', password_hash: adminHash, position: 'acme_corp',             role: 'Org Admin' },
-      { first_name: 'Rohan',  last_name: 'Sharma', email: 'rohan@acme-corp.com',      employee_id: 'EMP-002', password_hash: userHash,  position: 'acme_corp.cto.senior_dev', role: 'Employee' },
-      { first_name: 'Ayesha', last_name: 'Khan',   email: 'ayesha@acme-corp.com',     employee_id: 'EMP-003', password_hash: userHash,  position: 'acme_corp.hr_director',    role: 'HR Manager' },
+      { first_name: 'John',   last_name: 'Admin',  email: 'john.admin@acme-corp.com', employee_id: 'EMP-001', password_hash: adminHash, position: 'acme_corp',                  role: 'Org Admin' },
+      { first_name: 'Rohan',  last_name: 'Sharma', email: 'rohan@acme-corp.com',      employee_id: 'EMP-002', password_hash: userHash,  position: 'acme_corp.hr_director.senior_dev', role: 'Employee' },
+      { first_name: 'Ayesha', last_name: 'Khan',   email: 'ayesha@acme-corp.com',     employee_id: 'EMP-003', password_hash: userHash,  position: 'acme_corp.hr_director',         role: 'HR Manager' },
     ];
 
     const seededPeople = [];
@@ -244,7 +244,45 @@ async function seed() {
         log(`✅ Assigned role ${p.role} → ${p.first_name} ${p.last_name}`);
       }
     }
+    // ── 9.5 Leave Types & Policies ──────────────────────────────────────────
+    section('Leave Types & Policies');
 
+    const leaveTypeDefs = [
+      { name: 'Annual Leave', days: 10.0, is_paid: true },
+      { name: 'Sick Leave',   days: 7.0,  is_paid: true },
+      { name: 'Casual Leave', days: 5.0,  is_paid: true },
+    ];
+
+    for (const def of leaveTypeDefs) {
+      let leaveType;
+      const existingRes = await client.query(
+        'SELECT id, name FROM leave_types WHERE organization_id = $1 AND name = $2',
+        [org.id, def.name]
+      );
+      if (existingRes.rows.length > 0) {
+        leaveType = existingRes.rows[0];
+      } else {
+        const insertRes = await client.query(`
+          INSERT INTO leave_types (organization_id, name, is_paid, is_active)
+          VALUES ($1, $2, $3, true)
+          RETURNING id, name
+        `, [org.id, def.name, def.is_paid]);
+        leaveType = insertRes.rows[0];
+      }
+
+      // Check if policy exists
+      const existingPolicy = await client.query(
+        'SELECT id FROM leave_policies WHERE leave_type_id = $1',
+        [leaveType.id]
+      );
+      if (existingPolicy.rows.length === 0) {
+        await client.query(`
+          INSERT INTO leave_policies (leave_type_id, days_allowed, carry_forward_allowed)
+          VALUES ($1, $2, false)
+        `, [leaveType.id, def.days]);
+      }
+      log(`✅ Leave Type: ${leaveType.name} (Policy: ${def.days} days)`);
+    }
     // ── 10. Sample Audit Log ──────────────────────────────────────────────────
     section('Audit Log (sample row)');
 

@@ -84,3 +84,16 @@ export const actionLeaveRequest = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getLeaveTypes = async (req, res, next) => {
+  try {
+    const tenantId = req.currentTenantId;
+    const result = await leaveService.getLeaveTypes(tenantId);
+    res.status(200).json({
+      status: 'success',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
