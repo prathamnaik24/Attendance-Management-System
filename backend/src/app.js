@@ -11,7 +11,7 @@ const app = express();
 // Standard middlewares
 app.use(helmet());
 app.use(cors({
-  origin: env.CORS_ORIGIN,
+  origin: true, // Allow all origins dynamically in dev
   credentials: true
 }));
 app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
