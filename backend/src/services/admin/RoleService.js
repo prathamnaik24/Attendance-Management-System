@@ -2,7 +2,7 @@ import { db } from '../../db/index.js';
 
 export class RoleService {
   static async getRoles(orgId) {
-    const res = await db.query('SELECT * FROM roles WHERE org_id = $1', [orgId]);
+    const res = await db.query('SELECT * FROM roles WHERE organization_id = $1', [orgId]);
     return res.rows;
   }
 

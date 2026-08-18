@@ -3,22 +3,22 @@ import { db } from '../../db/index.js';
 export class ReportService {
   static async getAttendanceReport(orgId, startDate, endDate) {
     const res = await db.query(`
-      SELECT e.id as employee_id, e.first_name, e.last_name, count(a.id) as days_present 
-      FROM employees e
-      LEFT JOIN attendance a ON e.id = a.employee_id AND a.date >= $2 AND a.date <= $3
-      WHERE e.org_id = $1
-      GROUP BY e.id, e.first_name, e.last_name
+      SELECT p.id as person_id, p.employee_id, p.first_name, p.last_name, count(a.id) as days_present 
+      FROM persons p
+      LEFT JOIN attendance a ON p.id = a.person_id AND a.work_date >= $2 AND a.work_date <= $3
+      WHERE p.organization_id = $1
+      GROUP BY p.id, p.employee_id, p.first_name, p.last_name
     `, [orgId, startDate, endDate]);
     return res.rows;
   }
 
   static async getLeaveReport(orgId, startDate, endDate) {
     const res = await db.query(`
-      SELECT e.id as employee_id, e.first_name, e.last_name, l.status, count(l.id) as total_leaves
-      FROM employees e
-      JOIN leave_requests l ON e.id = l.employee_id
-      WHERE e.org_id = $1 AND l.start_date >= $2 AND l.end_date <= $3
-      GROUP BY e.id, e.first_name, e.last_name, l.status
+      SELECT p.id as person_id, p.employee_id, p.first_name, p.last_name, l.status, count(l.id) as total_leaves
+      FROM persons p
+      JOIN leave_requests l ON p.id = l.person_id
+      WHERE p.organization_id = $1 AND l.start_date >= $2 AND l.end_date <= $3
+      GROUP BY p.id, p.employee_id, p.first_name, p.last_name, l.status
     `, [orgId, startDate, endDate]);
     return res.rows;
   }
