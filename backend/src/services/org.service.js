@@ -154,8 +154,18 @@ export class OrgService {
 
     const result = await db.query(
       `SELECT 
-         p.id, p.first_name, p.last_name, p.email, p.phone_number, p.avatar_url, p.is_active, p.joined_at,
-         pos.id AS position_id, pos.title AS position_title, pos.path AS position_path
+         p.id, p.first_name, p.last_name, p.email, p.employee_id, p.phone_number, p.avatar_url, p.is_active, p.joined_at,
+         pos.id AS position_id, pos.title AS position_title, pos.path AS position_path,
+         (
+           SELECT r.name FROM person_roles pr
+           JOIN roles r ON r.id = pr.role_id
+           WHERE pr.person_id = p.id
+           LIMIT 1
+         ) AS role_name,
+         (
+           SELECT dept.name FROM departments dept
+           WHERE dept.id = pos.department_id
+         ) AS department_name
        FROM persons p
        LEFT JOIN position_assignments pa ON pa.person_id = p.id AND pa.is_primary = true AND (pa.end_date IS NULL OR pa.end_date >= current_date)
        LEFT JOIN positions pos ON pos.id = pa.position_id
@@ -176,10 +186,13 @@ export class OrgService {
         first_name: row.first_name,
         last_name: row.last_name,
         email: row.email,
+        employee_id: row.employee_id,
         phone_number: row.phone_number,
         avatar_url: row.avatar_url,
         is_active: row.is_active,
         joined_at: row.joined_at,
+        role: row.role_name || 'Employee',
+        department: row.department_name || 'General',
         primary_position: row.position_id
           ? {
               id: row.position_id,
