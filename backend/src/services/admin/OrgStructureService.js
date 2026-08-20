@@ -441,7 +441,7 @@ export class OrgStructureService {
   static async deletePosition(orgId, positionId) {
     const assignmentCheck = await db.query(
       `SELECT COUNT(*) FROM position_assignments 
-       WHERE position_id = $1 AND (end_date IS NULL OR end_date >= current_date)`,
+       WHERE position_id = $1 AND is_primary = true AND (end_date IS NULL OR end_date > current_date)`,
       [positionId]
     );
     if (parseInt(assignmentCheck.rows[0].count, 10) > 0) {
