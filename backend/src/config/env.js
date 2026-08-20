@@ -40,4 +40,9 @@ export const env = {
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev_refresh_secret_key_1234567890',
   },
   CORS_ORIGIN: (process.env.CORS_ORIGIN || 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175').split(','),
+  
+  // Email Configuration
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  EMAIL_FROM: process.env.EMAIL_FROM,
+  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
 };
