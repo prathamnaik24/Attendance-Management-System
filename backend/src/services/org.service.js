@@ -275,10 +275,10 @@ export class OrgService {
   }
 
   /**
-   * Update an employee's details or activation status (e.g. for offboarding)
+   * Update an employee's details, position assignment, or activation status
    */
   async updateEmployee(tenantId, employeeId, updates, changedBy) {
-    const { first_name, last_name, employee_id, is_active } = updates;
+    const { first_name, last_name, employee_id, is_active, position_id } = updates;
 
     const fields = [];
     const values = [tenantId, employeeId];
@@ -301,34 +301,73 @@ export class OrgService {
       values.push(is_active);
     }
 
-    if (fields.length === 0) return { message: 'No updates provided' };
-
-    fields.push(`updated_at = current_timestamp`);
-
     const client = await db.getClient();
     try {
       await client.query('BEGIN');
 
-      const result = await client.query(
-        `UPDATE persons 
-         SET ${fields.join(', ')}
-         WHERE organization_id = $1 AND id = $2
-         RETURNING id, first_name, last_name, employee_id, is_active`,
-        values
-      );
+      let person = null;
+      if (fields.length > 0) {
+        fields.push(`updated_at = current_timestamp`);
+        const result = await client.query(
+          `UPDATE persons 
+           SET ${fields.join(', ')}
+           WHERE organization_id = $1 AND id = $2
+           RETURNING id, first_name, last_name, employee_id, is_active`,
+          values
+        );
 
-      if (result.rows.length === 0) {
-        throw new AppError('Employee not found', 404);
+        if (result.rows.length === 0) {
+          throw new AppError('Employee not found', 404);
+        }
+        person = result.rows[0];
+      } else {
+        const check = await client.query(
+          `SELECT id, first_name, last_name, employee_id, is_active FROM persons WHERE organization_id = $1 AND id = $2`,
+          [tenantId, employeeId]
+        );
+        if (check.rows.length === 0) {
+          throw new AppError('Employee not found', 404);
+        }
+        person = check.rows[0];
+      }
+
+      // Handle position assignment update if position_id is explicitly provided
+      if (position_id !== undefined) {
+        // End existing active primary assignment(s)
+        await client.query(
+          `UPDATE position_assignments 
+           SET end_date = current_date, is_primary = false 
+           WHERE person_id = $1 AND (end_date IS NULL OR end_date >= current_date)`,
+          [employeeId]
+        );
+
+        if (position_id && position_id.trim() !== '') {
+          // Verify position exists in organization
+          const posCheck = await client.query(
+            'SELECT id, title, path FROM positions WHERE organization_id = $1 AND id = $2',
+            [tenantId, position_id]
+          );
+          if (posCheck.rows.length === 0) {
+            throw new AppError(`Position with ID "${position_id}" not found in this organization`, 404);
+          }
+
+          // Create new primary assignment
+          await client.query(
+            `INSERT INTO position_assignments (person_id, position_id, is_primary, start_date)
+             VALUES ($1, $2, true, current_date)`,
+            [employeeId, position_id]
+          );
+        }
       }
 
       await client.query(
         `INSERT INTO audit_logs (organization_id, entity_type, entity_id, action, new_data, changed_by, reason)
-         VALUES ($1, 'person', $2, 'UPDATE', $3::jsonb, $4, 'Employee details updated')`,
+         VALUES ($1, 'person', $2, 'UPDATE', $3::jsonb, $4, 'Employee details or position updated')`,
         [tenantId, employeeId, JSON.stringify(updates), changedBy]
       );
 
       await client.query('COMMIT');
-      return result.rows[0];
+      return person;
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
