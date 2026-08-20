@@ -149,13 +149,31 @@ export class LeaveService {
   /**
    * Fetch pending leave requests from subordinate team members.
    */
-  async getTeamPendingLeaves(managerPositionPath, tenantId, managerId) {
-    if (!managerPositionPath) {
+  async getTeamPendingLeaves(managerPositionPath, tenantId, managerId, isOrgAdmin = false) {
+    if (!managerPositionPath && !isOrgAdmin) {
       throw new AppError('Manager position path context is required to query subordinate pending requests', 400);
     }
 
-    const result = await db.query(
-      `SELECT 
+    let query, params;
+
+    if (isOrgAdmin) {
+      // Org Admins see all pending leave requests in the organization, including from employees without a position.
+      query = `SELECT 
+         lr.id, lr.start_date, lr.end_date, lr.status, lr.reason, lr.created_at,
+         lt.name AS leave_type_name, lt.id AS leave_type_id,
+         p.id AS person_id, p.first_name, p.last_name, p.email,
+         pos.title AS position_title, pos.path AS position_path
+       FROM leave_requests lr
+       JOIN persons p ON p.id = lr.person_id
+       LEFT JOIN position_assignments pa ON pa.person_id = p.id AND pa.is_primary = true AND (pa.end_date IS NULL OR pa.end_date >= current_date)
+       LEFT JOIN positions pos ON pos.id = pa.position_id
+       JOIN leave_types lt ON lt.id = lr.leave_type_id
+       WHERE p.organization_id = $1 AND lr.status = 'Pending' AND p.id <> $2
+       ORDER BY lr.created_at ASC`;
+      params = [tenantId, managerId];
+    } else {
+      // Managers only see pending leave requests from their subordinate hierarchy
+      query = `SELECT 
          lr.id, lr.start_date, lr.end_date, lr.status, lr.reason, lr.created_at,
          lt.name AS leave_type_name, lt.id AS leave_type_id,
          p.id AS person_id, p.first_name, p.last_name, p.email,
@@ -166,9 +184,11 @@ export class LeaveService {
        JOIN positions pos ON pos.id = pa.position_id
        JOIN leave_types lt ON lt.id = lr.leave_type_id
        WHERE p.organization_id = $1 AND pos.path <@ $2::ltree AND lr.status = 'Pending' AND p.id <> $3
-       ORDER BY lr.created_at ASC`,
-      [tenantId, managerPositionPath, managerId]
-    );
+       ORDER BY lr.created_at ASC`;
+      params = [tenantId, managerPositionPath, managerId];
+    }
+
+    const result = await db.query(query, params);
 
     return result.rows.map((row) => ({
       id: row.id,
@@ -187,8 +207,8 @@ export class LeaveService {
         last_name: row.last_name,
         email: row.email,
         position: {
-          title: row.position_title,
-          path: row.position_path,
+          title: row.position_title || 'No Position',
+          path: row.position_path || null,
         },
       },
     }));

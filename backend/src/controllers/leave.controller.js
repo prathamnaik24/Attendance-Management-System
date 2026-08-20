@@ -48,12 +48,13 @@ export const getTeamPendingLeaves = async (req, res, next) => {
   try {
     const tenantId = req.currentTenantId;
     const managerPositionPath = req.user.position_path;
+    const isOrgAdmin = req.user.roles && req.user.roles.includes('Org Admin');
 
-    if (!managerPositionPath) {
+    if (!managerPositionPath && !isOrgAdmin) {
       throw new AppError('Access denied: You are not assigned to a position in the management hierarchy', 403);
     }
 
-    const result = await leaveService.getTeamPendingLeaves(managerPositionPath, tenantId, req.user.person_id);
+    const result = await leaveService.getTeamPendingLeaves(managerPositionPath, tenantId, req.user.person_id, isOrgAdmin);
 
     res.status(200).json({
       status: 'success',
