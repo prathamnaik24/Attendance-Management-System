@@ -17,6 +17,7 @@ export class OrgService {
       phone_number = null,
       avatar_url = null,
       position_id = null,
+      role_id = null,
     } = data;
 
     if (!first_name || !last_name || !email) {
@@ -100,6 +101,16 @@ export class OrgService {
           path: posCheck.rows[0].path,
           assignment_id: assignmentResult.rows[0].id,
         };
+      }
+
+      // 4b. Assign role if provided (or default to Employee role)
+      let targetRoleId = role_id;
+      if (!targetRoleId) {
+        const empRole = await client.query("SELECT id FROM roles WHERE organization_id = $1 AND name = 'Employee'", [tenantId]);
+        if (empRole.rows.length > 0) targetRoleId = empRole.rows[0].id;
+      }
+      if (targetRoleId) {
+        await client.query("INSERT INTO person_roles (person_id, role_id) VALUES ($1, $2)", [employee.id, targetRoleId]);
       }
 
       // 5. Generate secure registration invitation token
@@ -275,10 +286,10 @@ export class OrgService {
   }
 
   /**
-   * Update an employee's details, position assignment, or activation status
+   * Update an employee's details, position assignment, role assignment, or activation status
    */
   async updateEmployee(tenantId, employeeId, updates, changedBy) {
-    const { first_name, last_name, employee_id, is_active, position_id } = updates;
+    const { first_name, last_name, employee_id, is_active, position_id, role_id } = updates;
 
     const fields = [];
     const values = [tenantId, employeeId];
@@ -360,9 +371,27 @@ export class OrgService {
         }
       }
 
+      // Handle role assignment update if role_id is explicitly provided
+      if (role_id !== undefined) {
+        await client.query('DELETE FROM person_roles WHERE person_id = $1', [employeeId]);
+        if (role_id && role_id.trim() !== '') {
+          const roleCheck = await client.query(
+            'SELECT id FROM roles WHERE organization_id = $1 AND id = $2',
+            [tenantId, role_id]
+          );
+          if (roleCheck.rows.length === 0) {
+            throw new AppError(`Role with ID "${role_id}" not found in this organization`, 404);
+          }
+          await client.query(
+            'INSERT INTO person_roles (person_id, role_id) VALUES ($1, $2)',
+            [employeeId, role_id]
+          );
+        }
+      }
+
       await client.query(
         `INSERT INTO audit_logs (organization_id, entity_type, entity_id, action, new_data, changed_by, reason)
-         VALUES ($1, 'person', $2, 'UPDATE', $3::jsonb, $4, 'Employee details or position updated')`,
+         VALUES ($1, 'person', $2, 'UPDATE', $3::jsonb, $4, 'Employee details or role/position updated')`,
         [tenantId, employeeId, JSON.stringify(updates), changedBy]
       );
 
@@ -386,6 +415,11 @@ export class OrgService {
       `SELECT 
          p.id, p.first_name, p.last_name, p.email, p.employee_id, p.phone_number, p.avatar_url, p.is_active, p.joined_at,
          pos.id AS position_id, pos.title AS position_title, pos.path AS position_path,
+         (
+           SELECT pr.role_id FROM person_roles pr
+           WHERE pr.person_id = p.id
+           LIMIT 1
+         ) AS role_id,
          (
            SELECT r.name FROM person_roles pr
            JOIN roles r ON r.id = pr.role_id
@@ -422,6 +456,7 @@ export class OrgService {
         is_active: row.is_active,
         joined_at: row.joined_at,
         role: row.role_name || 'Employee',
+        role_id: row.role_id || null,
         department: row.department_name || 'General',
         primary_position: row.position_id
           ? {
