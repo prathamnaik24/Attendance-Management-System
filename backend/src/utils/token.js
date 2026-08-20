@@ -11,7 +11,7 @@ import { env } from '../config/env.js';
  */
 export const generateTokens = (payload) => {
   const accessToken = jwt.sign(payload, env.JWT.accessSecret, {
-    expiresIn: '15m',
+    expiresIn: '24h',
   });
 
   const refreshToken = jwt.sign({ person_id: payload.person_id }, env.JWT.refreshSecret, {

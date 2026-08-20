@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { db } from '../../db/index.js';
 import { generateTokens } from '../../utils/token.js';
 import { AppError } from '../../middlewares/errorHandler.js';
+import { OrgStructureService } from '../admin/OrgStructureService.js';
 
 /**
  * OrgAuthService
@@ -104,6 +105,21 @@ export class OrgAuthService {
       );
 
       await client.query('COMMIT');
+
+      // Auto-seed starter hierarchy structure based on org_type
+      try {
+        const typeKey = (org_type || '').toLowerCase();
+        let templateKey = 'corporate';
+        if (typeKey.includes('school') || typeKey.includes('college') || typeKey.includes('edu')) templateKey = 'school';
+        else if (typeKey.includes('hospital') || typeKey.includes('health') || typeKey.includes('clinic')) templateKey = 'healthcare';
+        else if (typeKey.includes('ngo') || typeKey.includes('non-profit')) templateKey = 'ngo';
+        else if (typeKey.includes('retail') || typeKey.includes('store')) templateKey = 'retail';
+        else if (typeKey.includes('startup')) templateKey = 'startup';
+
+        await OrgStructureService.applyTemplate(organization.id, { templateKey, replaceExisting: false });
+      } catch (templateErr) {
+        console.warn('Could not auto-seed starter org structure template:', templateErr.message);
+      }
 
       // 8. Generate JWT
       const tokens = generateTokens({

@@ -1,5 +1,22 @@
 import { OrgStructureService } from '../../services/admin/OrgStructureService.js';
 
+export const getTemplates = (req, res) => {
+  const templates = OrgStructureService.getTemplatesList();
+  res.json({ status: 'success', data: templates });
+};
+
+export const applyTemplate = async (req, res, next) => {
+  try {
+    const result = await OrgStructureService.applyTemplate(
+      req.user.organization_id,
+      req.body
+    );
+    res.status(201).json({ status: 'success', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getDepartments = async (req, res, next) => {
   try {
     const departments = await OrgStructureService.getDepartments(req.user.organization_id);
