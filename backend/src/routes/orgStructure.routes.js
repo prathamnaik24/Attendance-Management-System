@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { getDepartments, getPositionsTree } from '../controllers/admin/orgStructure.controller.js';
+import {
+  getDepartments,
+  getPositionsTree,
+  createPosition,
+  updatePosition,
+  deletePosition,
+} from '../controllers/admin/orgStructure.controller.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 const router = Router();
@@ -7,5 +13,8 @@ const router = Router();
 router.use(requireAuth);
 router.get('/departments', getDepartments);
 router.get('/positions', getPositionsTree);
+router.post('/positions', createPosition);
+router.patch('/positions/:id', updatePosition);
+router.delete('/positions/:id', deletePosition);
 
 export default router;
