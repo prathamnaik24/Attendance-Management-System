@@ -319,14 +319,13 @@ export class LeaveService {
   }
 
   async getLeaveTypes(tenantId) {
-    const res = await db.query(
-      `SELECT lt.id, lt.name, lt.is_paid, lt.is_active, lp.days_allowed 
-       FROM leave_types lt 
-       LEFT JOIN leave_policies lp ON lp.leave_type_id = lt.id 
-       WHERE lt.organization_id = $1 AND lt.is_active = true 
-       ORDER BY lt.name ASC`,
-      [tenantId]
-    );
+    const res = await db.query(`
+      SELECT lt.id, lt.name, lt.is_paid, lt.is_active, lp.days_allowed
+      FROM leave_types lt
+      LEFT JOIN leave_policies lp ON lt.id = lp.leave_type_id
+      WHERE lt.organization_id = $1 AND lt.is_active = true 
+      ORDER BY lt.name ASC
+    `, [tenantId]);
     return res.rows;
   }
 }
